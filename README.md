@@ -1,2 +1,7 @@
-# Senior_citzens_dashboard
-this app is used to add,modify and delete the reminders for senior people
+# Senior Medication Dashboard (Streamlit)
+
+## Run
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```

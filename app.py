@@ -4,9 +4,10 @@ import os
 from datetime import date
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 
 # ---------- Google Sheets Setup ----------
-SHEET_ID = "1L5pgfxHu6DMFYkZ474rqPz2fvF8KQp1byaOofYy091M"  # Change this to your Google Sheet name
+SHEET_ID = "1L5pgfxHu6DMFYkZ474rqPz2fvF8KQp1byaOofYy091M"
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.file",
@@ -14,21 +15,22 @@ SCOPES = [
 ]
 
 # Authenticate with service account
-creds = Credentials.from_service_account_file("creds.json", scopes=SCOPES)
+
+service_account_info = st.secrets["gcp_service_account"]
+creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
 client = gspread.authorize(creds)
 
 try:
     sheet = client.open_by_key(SHEET_ID).sheet1
 except Exception as e:
     st.error(f"❌ Could not open Google Sheet with ID {SHEET_ID}. "
-         f"Make sure your service account email has access (Editor role). Error: {e}")
-
+             f"Make sure your service account email has access (Editor role). Error: {e}")
     st.stop()
 
 # ---------- Helpers ----------
 COLUMNS = [
-    "PatientID","Name","PhoneNumber","MedicationName","Dosage","Frequency",
-    "LastAdministeredDate","NextDueDate","Time","Notes"
+    "PatientID", "Name", "PhoneNumber", "MedicationName", "Dosage", "Frequency",
+    "LastAdministeredDate", "NextDueDate", "Time", "Notes"
 ]
 
 def load_data():
@@ -69,12 +71,17 @@ for key, default in {
 df = load_data()
 
 # ---------- Top Actions ----------
-col_a, col_b = st.columns([1,1])
+col_a, col_b = st.columns([1, 1])
 with col_a:
     if st.button("➕ Add New Patient", key="add_btn"):
         st.session_state.show_add_form = True
 with col_b:
-    st.button("⏰ Set Reminder", key="rem_btn")  # placeholder for future
+    if st.button("⏰ Set Reminder", key="rem_btn"):
+        # Redirect to webhook URL
+        webhook_url = "https://ramvardhan.app.n8n.cloud/webhook-test/1c5d3a3c-e03a-4b19-b51f-e705b6f0f541"
+        st.markdown(f"""
+            <meta http-equiv="refresh" content="0; url={webhook_url}">
+        """, unsafe_allow_html=True)
 
 # ---------- Add New Patient Form ----------
 if st.session_state.show_add_form:
@@ -101,7 +108,7 @@ if st.session_state.show_add_form:
             time_ = st.text_input("Time (e.g., 09:00 AM)")
             notes = st.text_input("Notes")
 
-        sb1, sb2 = st.columns([1,1])
+        sb1, sb2 = st.columns([1, 1])
         with sb1:
             submitted = st.form_submit_button("Save", use_container_width=True)
         with sb2:
@@ -146,7 +153,7 @@ else:
     ids = df["PatientID"].astype(str).tolist()
     selected_id = st.selectbox("Patient ID:", ids, key="manage_select")
 
-    left, right = st.columns([1,1])
+    left, right = st.columns([1, 1])
     with left:
         if st.button("✏️ Modify Record", key="mod_btn"):
             st.session_state.show_modify_form = True
@@ -164,7 +171,7 @@ else:
             c1, c2, c3 = st.columns(3)
             with c1:
                 name = st.text_input("Name", value=record["Name"])
-                phone = st.text_input("Phone Number", value=record.get("PhoneNumber",""))
+                phone = st.text_input("Phone Number", value=record.get("PhoneNumber", ""))
                 dosage = st.text_input("Dosage", value=record["Dosage"])
                 last_date = st.text_input("Last Administered Date", value=record["LastAdministeredDate"])
             with c2:
@@ -175,7 +182,7 @@ else:
                 time_ = st.text_input("Time", value=record["Time"])
                 notes = st.text_input("Notes", value=record["Notes"])
 
-            sb1, sb2 = st.columns([1,1])
+            sb1, sb2 = st.columns([1, 1])
             with sb1:
                 save = st.form_submit_button("Save Changes", use_container_width=True)
             with sb2:
